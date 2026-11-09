@@ -84,11 +84,11 @@
 
   /* donut */
   .donutwrap{display:flex;align-items:center;gap:36px;flex-wrap:wrap;margin:4px 0 0}
-  .donut{width:150px;height:150px;border-radius:50%;flex:none;
-    background:conic-gradient(var(--spark) 0 97.09%, var(--pandas) 97.09% 100%);
-    display:grid;place-items:center;position:relative}
-  .donut::after{content:"";position:absolute;inset:26px;background:var(--paper);border-radius:50%}
-  .donut b{position:relative;z-index:1;font-family:var(--serif);font-size:22px;font-weight:600}
+  .donut{width:150px;height:150px;border-radius:50%;flex:none;position:relative;
+    background:conic-gradient(var(--spark) 0 97.09%, var(--pandas) 97.09% 100%)}
+  .donut::after{content:"";position:absolute;inset:30px;background:var(--paper);border-radius:50%}
+  .donut b{position:absolute;inset:0;display:grid;place-items:center;z-index:2;
+    font-family:var(--serif);font-size:21px;font-weight:600}
   .donutlist{display:grid;gap:7px;font-size:13.5px;margin:0;padding:0;list-style:none}
   .donutlist .k{display:inline-block;width:9px;height:9px;border-radius:1px;margin-right:8px}
 
@@ -97,9 +97,12 @@
            text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid var(--rule)}
   .gaps td{padding:9px 0;border-bottom:1px solid var(--rule-soft)}
   .gaps td:last-child,.gaps th:last-child{text-align:right}
-  .gaps .micro{display:inline-block;height:6px;background:var(--pandas);opacity:.55;border-radius:1px;vertical-align:2px;margin-right:8px}
+  .gaps .bartrack{display:inline-block;width:90px;height:6px;background:var(--rule-soft);
+    border-radius:1px;vertical-align:2px;margin-right:10px;overflow:hidden}
+  .gaps .micro{display:block;height:100%;background:var(--pandas);opacity:.6}
 
-  footer{padding:34px 0 60px;font-size:12.5px;color:var(--muted);display:flex;
+  footer{margin-top:26px;padding:26px 0 64px;border-top:1px solid var(--rule);
+         font-size:12.5px;color:var(--muted);display:flex;
          justify-content:space-between;gap:20px;flex-wrap:wrap}
   footer a{text-decoration:none;border-bottom:1px solid #cfc9bb;padding-bottom:1px}
 
@@ -242,11 +245,11 @@
     <table class="gaps">
       <thead><tr><th>Colonne</th><th>Manquantes</th><th>Part</th></tr></thead>
       <tbody>
-        <tr><td>X Coordinate · Y Coordinate · Latitude · Longitude</td><td>139 165</td><td><span class="micro" style="width:88px"></span>2,91 %</td></tr>
-        <tr><td>Community Area</td><td>16 421</td><td><span class="micro" style="width:10px"></span>0,34 %</td></tr>
-        <tr><td>Ward</td><td>15 747</td><td><span class="micro" style="width:10px"></span>0,33 %</td></tr>
-        <tr><td>Location Description</td><td>13 335</td><td><span class="micro" style="width:8px"></span>0,28 %</td></tr>
-        <tr><td>Les 17 autres colonnes</td><td>0</td><td>0,00 %</td></tr>
+        <tr><td>X Coordinate · Y Coordinate · Latitude · Longitude</td><td>139 165</td><td><span class="bartrack"><span class="micro" style="width:100%"></span></span>2,91 %</td></tr>
+        <tr><td>Community Area</td><td>16 421</td><td><span class="bartrack"><span class="micro" style="width:12%"></span></span>0,34 %</td></tr>
+        <tr><td>Ward</td><td>15 747</td><td><span class="bartrack"><span class="micro" style="width:11%"></span></span>0,33 %</td></tr>
+        <tr><td>Location Description</td><td>13 335</td><td><span class="bartrack"><span class="micro" style="width:10%"></span></span>0,28 %</td></tr>
+        <tr><td>Les 17 autres colonnes</td><td>0</td><td><span class="bartrack"></span>0,00 %</td></tr>
       </tbody>
     </table>
   </div>
