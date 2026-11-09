@@ -3,3 +3,5 @@
 resultats.json
 .ipynb_checkpoints/
 __pycache__/
+site/.vercel/
+.vercel/

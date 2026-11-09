@@ -3,12 +3,15 @@
 TP Big Data sur le jeu *Crimes - 2001 to Present* de la ville de Chicago : la même analyse écrite en
 pandas puis en Spark, avec les temps et la mémoire mesurés sur la machine.
 
+En ligne : <https://chicagocrimes.vercel.app>
+
 ## Contenu
 
 - `TP_Crimes_Chicago.ipynb` : le notebook exécuté, sorties réelles incluses
 - `TP_Crimes_Chicago.html` : le même rendu, lisible sans Jupyter
 - `Reponses_TP_Crimes.md` : les réponses question par question
 - `requirements.txt` : de quoi relancer le notebook
+- `site/` : la page publiée sur Vercel (copie du notebook, du rapport et du rendu HTML)
 
 ## Données
 
