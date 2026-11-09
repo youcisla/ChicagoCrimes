@@ -1,0 +1,6 @@
+.venv
+*.csv
+.git
+.vercel
+.env*
+resultats.json

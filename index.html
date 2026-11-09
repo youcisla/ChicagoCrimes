@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crimes à Chicago — pandas vs Spark</title>
+<meta name="description" content="4,8 millions de faits de police de Chicago, lus avec pandas puis avec Spark. Les temps et la mémoire mesurés.">
+<style>
+  :root{
+    --paper:#faf8f3; --card:#fffdf9; --ink:#171613; --muted:#6d6a62;
+    --rule:#e4ded2; --rule-soft:#efe9dd;
+    --pandas:#b8492b; --spark:#2f5f52; --neutral:#8a867c;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.6 var(--sans);
+       font-variant-numeric:tabular-nums;}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+  a{color:inherit}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.9em;
+       background:#f0ebe0;padding:1px 5px;border-radius:3px}
+
+  /* hero */
+  header{padding:72px 0 16px;border-bottom:1px solid var(--rule)}
+  .eyebrow{font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--muted);margin:0}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(38px,6vw,64px);line-height:1.03;
+     letter-spacing:-.025em;margin:18px 0 0;max-width:15ch}
+  .lede{font-size:17px;line-height:1.5;color:#3f3d38;max-width:56ch;margin:18px 0 0}
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--rule);
+        margin:34px 0 0;border:1px solid var(--rule)}
+  .kpi{background:var(--card);padding:16px 18px 18px}
+  .kpi b{display:block;font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:-.02em;line-height:1}
+  .kpi span{display:block;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:7px}
+  .links{display:flex;flex-wrap:wrap;gap:22px;margin:26px 0 30px;font-size:13.5px}
+  .links a{text-decoration:none;border-bottom:1px solid #c8c2b4;padding-bottom:2px;transition:border-color .15s}
+  .links a:hover{border-color:var(--ink)}
+
+  /* sections */
+  section{padding:52px 0 8px;border-bottom:1px solid var(--rule-soft)}
+  section:last-of-type{border-bottom:0}
+  .head{display:flex;align-items:baseline;gap:16px;margin-bottom:6px}
+  .num{font-size:11.5px;color:var(--muted);letter-spacing:.1em}
+  h2{font-family:var(--serif);font-size:clamp(23px,3vw,30px);font-weight:600;letter-spacing:-.015em;margin:0;line-height:1.2}
+  .note{color:#45423c;max-width:64ch;margin:10px 0 26px;font-size:14.5px}
+  .note em{font-style:normal;color:var(--muted)}
+
+  /* bar chart */
+  .chart{display:grid;gap:10px;margin:0 0 8px}
+  .row{display:grid;grid-template-columns:190px 1fr 86px;align-items:center;gap:14px}
+  .row .label{font-size:13px;color:#3a3833;line-height:1.3}
+  .row .label small{display:block;color:var(--muted);font-size:11px;letter-spacing:.03em}
+  .track{background:var(--rule-soft);height:26px;position:relative;border-radius:2px;overflow:hidden}
+  .bar{height:100%;border-radius:2px;transform-origin:left;animation:grow .7s cubic-bezier(.2,.7,.2,1) both}
+  .bar.p{background:var(--pandas)} .bar.s{background:var(--spark)} .bar.n{background:var(--neutral)}
+  .row .val{font-size:13.5px;text-align:right;font-weight:600;letter-spacing:-.01em}
+  @keyframes grow{from{transform:scaleX(.02)}to{transform:scaleX(1)}}
+  @media (prefers-reduced-motion:reduce){.bar{animation:none}}
+
+  .scale{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted);
+         margin:6px 0 0 204px;padding-right:100px;letter-spacing:.04em}
+
+  /* partitions */
+  .parts{display:flex;gap:3px;margin:4px 0 10px}
+  .parts i{flex:1;height:34px;background:var(--spark);opacity:.16;border-radius:1px}
+  .parts i:nth-child(odd){opacity:.3}
+  .legend{display:flex;gap:22px;font-size:12.5px;color:var(--muted);flex-wrap:wrap}
+  .legend b{color:var(--ink);font-weight:600}
+
+  /* split line */
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);border:1px solid var(--rule);margin:6px 0 0}
+  .split > div{background:var(--card);padding:18px 20px}
+  .split .k{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .split .v{font-family:var(--serif);font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.1;margin-top:6px}
+  .split .v.p{color:var(--pandas)} .split .v.s{color:var(--spark)}
+  .split .d{font-size:12.5px;color:var(--muted);margin-top:4px}
+
+  /* stacked share */
+  .share{display:flex;height:40px;border-radius:2px;overflow:hidden;margin:6px 0 12px}
+  .share span{display:flex;align-items:center;justify-content:center;font-size:11.5px;color:#fff;letter-spacing:.03em}
+  .sharekey{display:flex;flex-wrap:wrap;gap:20px;font-size:12.5px;color:var(--muted)}
+  .sharekey i{display:inline-block;width:9px;height:9px;margin-right:7px;border-radius:1px;vertical-align:1px}
+
+  /* donut */
+  .donutwrap{display:flex;align-items:center;gap:36px;flex-wrap:wrap;margin:4px 0 0}
+  .donut{width:150px;height:150px;border-radius:50%;flex:none;
+    background:conic-gradient(var(--spark) 0 97.09%, var(--pandas) 97.09% 100%);
+    display:grid;place-items:center;position:relative}
+  .donut::after{content:"";position:absolute;inset:26px;background:var(--paper);border-radius:50%}
+  .donut b{position:relative;z-index:1;font-family:var(--serif);font-size:22px;font-weight:600}
+  .donutlist{display:grid;gap:7px;font-size:13.5px;margin:0;padding:0;list-style:none}
+  .donutlist .k{display:inline-block;width:9px;height:9px;border-radius:1px;margin-right:8px}
+
+  .gaps{width:100%;border-collapse:collapse;margin:14px 0 0;font-size:13.5px}
+  .gaps th{text-align:left;font-weight:500;color:var(--muted);font-size:11.5px;letter-spacing:.05em;
+           text-transform:uppercase;padding:0 0 8px;border-bottom:1px solid var(--rule)}
+  .gaps td{padding:9px 0;border-bottom:1px solid var(--rule-soft)}
+  .gaps td:last-child,.gaps th:last-child{text-align:right}
+  .gaps .micro{display:inline-block;height:6px;background:var(--pandas);opacity:.55;border-radius:1px;vertical-align:2px;margin-right:8px}
+
+  footer{padding:34px 0 60px;font-size:12.5px;color:var(--muted);display:flex;
+         justify-content:space-between;gap:20px;flex-wrap:wrap}
+  footer a{text-decoration:none;border-bottom:1px solid #cfc9bb;padding-bottom:1px}
+
+  @media (max-width:760px){
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .row{grid-template-columns:112px 1fr 66px;gap:10px}
+    .row .label{font-size:12px}
+    .scale{margin-left:122px;padding-right:76px}
+    .split{grid-template-columns:1fr}
+    header{padding-top:48px}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">TP Big Data · Chicago Police Department · 22 colonnes</p>
+    <h1>Quatre millions de crimes, deux moteurs.</h1>
+    <p class="lede">La même série lue avec pandas puis avec Spark. Ce que chaque moteur coûte en temps
+      et en mémoire, mesuré sur la même machine, avec le même fichier.</p>
+    <div class="kpis">
+      <div class="kpi"><b>4 778 681</b><span>faits analysés</span></div>
+      <div class="kpi"><b>1,66 s</b><span>lecture pandas</span></div>
+      <div class="kpi"><b>0,99 s</b><span>lecture Spark</span></div>
+      <div class="kpi"><b>8×</b><span>schéma manuel vs inféré</span></div>
+    </div>
+    <p class="links">
+      <a href="https://github.com/youcisla/ChicagoCrimes">Code source</a>
+      <a href="TP_Crimes_Chicago.ipynb">Notebook (.ipynb)</a>
+      <a href="Reponses_TP_Crimes.md">Réponses écrites</a>
+      <a href="https://data.cityofchicago.org/api/views/ijzp-q8t2/rows.csv?accessType=DOWNLOAD">Données d'origine</a>
+    </p>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="head"><span class="num">01</span><h2>Un fichier, quatorze blocs</h2></div>
+    <p class="note">L'export complet pèse 1,9 Go pour 8,07 M de lignes. Les mesures portent sur un
+      extrait de 1,13 Go. Spark ne charge pas ce fichier : il le découpe en blocs de 128 Mo et
+      envoie une tâche par bloc. <em>14 partitions, donc 14 tâches en parallèle.</em></p>
+    <div class="parts">
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="legend">
+      <span><b>1,13 Go</b> sur disque</span>
+      <span><b>128 Mo</b> par partition</span>
+      <span><b>22</b> colonnes</span>
+      <span><b>0</b> octet du fichier dans la RAM du driver</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head"><span class="num">02</span><h2>Lire le fichier</h2></div>
+    <p class="note">Temps de lecture suivi d'un <code>count()</code>, sinon la mesure ne veut rien dire :
+      Spark ne lit rien tant qu'on ne lui demande pas de résultat.</p>
+    <div class="chart">
+      <div class="row"><div class="label">pandas, moteur C<small>pandas 2.x</small></div>
+        <div class="track"><div class="bar p" style="width:92.3%"></div></div><div class="val">6,38 s</div></div>
+      <div class="row"><div class="label">pandas, moteur Arrow<small>pandas 3, par défaut</small></div>
+        <div class="track"><div class="bar p" style="width:24%"></div></div><div class="val">1,66 s</div></div>
+      <div class="row"><div class="label">Spark, lecture par défaut<small>sans header</small></div>
+        <div class="track"><div class="bar s" style="width:27.9%"></div></div><div class="val">1,93 s</div></div>
+      <div class="row"><div class="label">Spark, header=True<small>noms de colonnes corrects</small></div>
+        <div class="track"><div class="bar s" style="width:14.3%"></div></div><div class="val">0,99 s</div></div>
+    </div>
+    <div class="scale"><span>0 s</span><span>6,9 s</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head"><span class="num">03</span><h2>Le vrai écart est en mémoire</h2></div>
+    <p class="note">pandas matérialise tout dans un processus. Spark garde le fichier sur disque et ne
+      remonte que les agrégats. Sur un poste à 32 Go la différence est une marge ; sur 8 Go, c'est un
+      fichier qu'on ne peut pas ouvrir.</p>
+    <div class="split">
+      <div>
+        <div class="k">pandas</div>
+        <div class="v p">2,78 Go</div>
+        <div class="d">RAM du process pour un DataFrame de 1,36 Go, soit 2,5× le fichier</div>
+      </div>
+      <div>
+        <div class="k">Spark</div>
+        <div class="v s">~0 Go</div>
+        <div class="d">le driver ne garde qu'un compteur, les blocs restent sur disque</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head"><span class="num">04</span><h2>Deviner les types coûte une passe entière</h2></div>
+    <p class="note"><code>inferSchema=True</code> relit tout le fichier rien que pour deviner les
+      colonnes, avant la vraie lecture. Déclarer le schéma à la main supprime ce passage.</p>
+    <div class="chart">
+      <div class="row"><div class="label">inferSchema=True<small>deux lectures</small></div>
+        <div class="track"><div class="bar p" style="width:100%"></div></div><div class="val">6,91 s</div></div>
+      <div class="row"><div class="label">Schéma déclaré<small>une lecture</small></div>
+        <div class="track"><div class="bar s" style="width:12.3%"></div></div><div class="val">0,85 s</div></div>
+    </div>
+    <div class="scale"><span>0 s</span><span>6,9 s</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head"><span class="num">05</span><h2>Ce que coûtent les statistiques</h2></div>
+    <p class="note">Les deux relancent un scan complet des 4,8 M de lignes. <code>summary()</code> ajoute
+      les quartiles, et les quartiles se paient. Le cache ramène le second passage à un dixième de
+      seconde.</p>
+    <div class="chart">
+      <div class="row"><div class="label">describe()<small>count, mean, stddev, min, max</small></div>
+        <div class="track"><div class="bar n" style="width:19.3%"></div></div><div class="val">39,3 s</div></div>
+      <div class="row"><div class="label">summary()<small>+ quartiles 25 / 50 / 75</small></div>
+        <div class="track"><div class="bar p" style="width:100%"></div></div><div class="val">203,3 s</div></div>
+      <div class="row"><div class="label">2<sup>e</sup> count() après cache<small>le fichier n'est plus relu</small></div>
+        <div class="track"><div class="bar s" style="width:0.6%;min-width:4px"></div></div><div class="val">0,39 s</div></div>
+    </div>
+    <div class="scale"><span>0 s</span><span>203 s</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head"><span class="num">06</span><h2>Des données presque complètes</h2></div>
+    <p class="note">La géolocalisation est le seul vrai trou : 2,91 % des faits n'ont ni coordonnées ni
+      latitude, et ce sont exactement les mêmes lignes d'une colonne à l'autre.</p>
+    <div class="donutwrap">
+      <div class="donut"><b>97,1 %</b></div>
+      <ul class="donutlist">
+        <li><span class="k" style="background:var(--spark)"></span>4 639 516 faits géolocalisés</li>
+        <li><span class="k" style="background:var(--pandas)"></span>139 165 sans coordonnées</li>
+      </ul>
+    </div>
+    <table class="gaps">
+      <thead><tr><th>Colonne</th><th>Manquantes</th><th>Part</th></tr></thead>
+      <tbody>
+        <tr><td>X Coordinate · Y Coordinate · Latitude · Longitude</td><td>139 165</td><td><span class="micro" style="width:88px"></span>2,91 %</td></tr>
+        <tr><td>Community Area</td><td>16 421</td><td><span class="micro" style="width:10px"></span>0,34 %</td></tr>
+        <tr><td>Ward</td><td>15 747</td><td><span class="micro" style="width:10px"></span>0,33 %</td></tr>
+        <tr><td>Location Description</td><td>13 335</td><td><span class="micro" style="width:8px"></span>0,28 %</td></tr>
+        <tr><td>Les 17 autres colonnes</td><td>0</td><td>0,00 %</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="head"><span class="num">07</span><h2>Trois catégories font la moitié des faits</h2></div>
+    <p class="note">35 types de crime distincts, mais une distribution très concentrée : le vol, les
+      coups et blessures et les dégradations couvrent 50,7 % des enregistrements.</p>
+    <div class="share">
+      <span style="background:var(--pandas);flex:21.85">21,9 %</span>
+      <span style="background:#c9613f;flex:17.91">17,9 %</span>
+      <span style="background:#d98b6b;flex:10.91">10,9 %</span>
+      <span style="background:var(--neutral);flex:49.33">49,3 % · 32 autres types</span>
+    </div>
+    <div class="sharekey">
+      <span><i style="background:var(--pandas)"></i>Theft</span>
+      <span><i style="background:#c9613f"></i>Battery</span>
+      <span><i style="background:#d98b6b"></i>Criminal damage</span>
+    </div>
+    <div class="chart" style="margin-top:26px">
+      <div class="row"><div class="label">Theft</div><div class="track"><div class="bar p" style="width:100%"></div></div><div class="val">1 044 026</div></div>
+      <div class="row"><div class="label">Battery</div><div class="track"><div class="bar p" style="width:82%"></div></div><div class="val">856 076</div></div>
+      <div class="row"><div class="label">Criminal damage</div><div class="track"><div class="bar p" style="width:49.9%"></div></div><div class="val">521 203</div></div>
+      <div class="row"><div class="label">Narcotics</div><div class="track"><div class="bar p" style="width:43.1%"></div></div><div class="val">450 421</div></div>
+      <div class="row"><div class="label">Assault</div><div class="track"><div class="bar p" style="width:29.2%"></div></div><div class="val">304 841</div></div>
+      <div class="row"><div class="label">Other offense</div><div class="track"><div class="bar p" style="width:28.3%"></div></div><div class="val">295 000</div></div>
+      <div class="row"><div class="label">Burglary</div><div class="track"><div class="bar p" style="width:25.8%"></div></div><div class="val">269 230</div></div>
+      <div class="row"><div class="label">Deceptive practice</div><div class="track"><div class="bar p" style="width:23.6%"></div></div><div class="val">246 498</div></div>
+      <div class="row"><div class="label">Motor vehicle theft</div><div class="track"><div class="bar p" style="width:20.5%"></div></div><div class="val">213 950</div></div>
+      <div class="row"><div class="label">Robbery</div><div class="track"><div class="bar p" style="width:17.1%"></div></div><div class="val">178 236</div></div>
+    </div>
+    <div class="scale"><span>0</span><span>1 044 026 faits</span></div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <span>Mesures sur Windows 11, 14 cœurs, 32 Go — PySpark 4.3.0, pandas 3.x, Java 17.</span>
+  <span><a href="https://github.com/youcisla/ChicagoCrimes">github.com/youcisla/ChicagoCrimes</a></span>
+</footer>
+
+</body>
+</html>

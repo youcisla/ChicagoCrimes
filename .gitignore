@@ -5,3 +5,5 @@ resultats.json
 __pycache__/
 site/.vercel/
 .vercel/
+.vercel
+.env*
