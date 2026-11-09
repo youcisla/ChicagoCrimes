@@ -1,0 +1,8 @@
+pyspark==4.3.0
+pandas
+pyarrow
+psutil
+nbformat
+nbclient
+nbconvert
+ipykernel
